@@ -1,0 +1,23 @@
+project: berry
+target: berry
+
+# File-input (CLI) target: feed the fuzz bytes as a BERRY source file to the interpreter.
+# Berry's CLI driver (default/berry.c) loads the file, compiles it with the one-pass bytecode
+# compiler, and runs it on the register-based VM — exercising the whole language pipeline (lexer,
+# compiler, VM, runtime libraries) in src/*.c. Not libFuzzer: the interpreter binary IS the natural
+# fuzz surface, so the file-input target both fuzzes and serves as its own single-input reproducer.
+# @@ is the input-file placeholder.
+#
+# Ported from the old mayhemheroes integration's single file-input target (old Mayhemfile ran
+# `/repo/berry @@`, the binary the old Dockerfile built via `make`). Same shape and target NAME
+# ("berry"), now pointed at the base-image build output under /mayhem.
+#
+# Leak detection is disabled inside the binary via a strong __asan_default_options (see
+# mayhem/build.sh) — deliberately NOT via an ASAN_OPTIONS env var here. ASan's
+# use-after-free/overflow detection and full halting UBSan stay ON, so real defects in the
+# compiler/VM are recorded as crashes.
+cmds:
+  - cmd: /mayhem/berry @@
+testsuite:
+  - https://$MAYHEM_DOMAIN/$MAYHEM_PROJECT/$MAYHEM_TARGET/testsuite.tar
+  - file://mayhem/berry/testsuite
